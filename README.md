@@ -1,131 +1,104 @@
-# Credit Card Customer Service Voice Agent (MVP)
+# Card Concierge
 
-Hackathon MVP for a voice AI agent that calls card issuers to handle:
-- Fee waiver requests
-- Fraud alerts (card lock + case)
-- Billing disputes
+AI-powered voice agent that calls your credit card company and resolves issues for you.
 
-Stack:
-- Vapi AI for real-time voice calls and assistant orchestration
-- Hathora for unified STT/TTS model routing
-- Node + Express backend for tool execution and workflow logic
+Describe the problem — Card Concierge handles the rest: fee waivers, fraud alerts, and billing disputes, all through a single guided flow.
 
-## 1) Setup
+## How It Works
+
+1. **Link Your Card** — Connect your credit card and select the provider
+2. **Describe the Issue** — Record audio or type what happened
+3. **We Solve It** — Our AI agent calls the card company and resolves it
+
+## Tech Stack
+
+- **Vapi** — Real-time voice calls and assistant orchestration
+- **Hathora** — Unified STT/TTS model routing (Deepgram, ElevenLabs, Qwen)
+- **Node + Express** — Backend API and workflow engine
+- **Vanilla JS** — Lightweight frontend, no build step
+
+## Quick Start
 
 ```bash
-cp .env.example .env
+cp .env.example .env    # fill in your API keys
 npm install
+npm run dev             # starts on http://localhost:3000
 ```
 
-Set these in `.env`:
-- `VAPI_API_KEY`
-- `VAPI_WEBHOOK_SECRET`
-- `HATHORA_API_KEY`
-- Optional: `PUBLIC_BASE_URL` (your ngrok/tunnel URL)
+### Environment Variables
 
-Run backend:
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `VAPI_API_KEY` | Yes | Vapi platform API key |
+| `VAPI_WEBHOOK_SECRET` | Yes | Secret for webhook signature validation |
+| `VAPI_ASSISTANT_ID` | Yes | Your Vapi assistant ID |
+| `HATHORA_API_KEY` | Yes | Hathora API key for voice processing |
+| `PORT` | No | Server port (default: `3000`) |
+| `PUBLIC_BASE_URL` | No | Your public tunnel URL for Vapi webhooks |
+| `VAPI_OUTBOUND_PHONE_NUMBER_ID` | No | Phone number ID for outbound calls |
+
+## Deploy to Vercel
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/YOUR_USERNAME/YOUR_REPO)
 
 ```bash
-npm run dev
+npm i -g vercel
+vercel
 ```
 
-Health check:
+Add your environment variables in the Vercel dashboard under **Settings > Environment Variables**.
 
-```bash
-curl http://localhost:3000/health
+## Project Structure
+
+```
+├── public/             # Frontend (served as static files)
+│   ├── index.html
+│   ├── styles.css
+│   └── app.js
+├── src/
+│   ├── server.js       # Express server + all API routes
+│   ├── config/         # Vapi assistant configuration
+│   └── lib/
+│       ├── actions.js          # Card tool actions (fee waiver, fraud, dispute)
+│       ├── resolution-flow.js  # Voice intake → call handling → summary
+│       ├── hathora.js          # STT/TTS via Hathora
+│       ├── vapi.js             # Vapi API client
+│       ├── vapi-webhook.js     # Webhook handler
+│       └── store.js            # Customer data store
+├── data/               # Mock customer data
+├── scripts/            # Vapi assistant push script
+└── vercel.json         # Vercel deployment config
 ```
 
-## 2) Expose Localhost for Vapi
+## API Endpoints
 
-Use any tunnel (ngrok / cloudflared) and copy the HTTPS base URL.
+### Tool Endpoints (called by Vapi assistant)
 
-Example:
+| Endpoint | Description |
+|----------|-------------|
+| `POST /api/tools/verify-customer` | Verify customer identity |
+| `POST /api/tools/list-cards` | List customer's credit cards |
+| `POST /api/tools/request-fee-waiver` | Request annual/late fee waiver |
+| `POST /api/tools/report-fraud-alert` | Lock card + file fraud case |
+| `POST /api/tools/open-billing-dispute` | Open billing dispute |
+| `POST /api/tools/escalate-to-human` | Escalate to human agent |
 
-```bash
-ngrok http 3000
-```
+### Agent Flow
 
-## 3) Push Assistant Config to Vapi
+| Endpoint | Description |
+|----------|-------------|
+| `POST /api/agent/test-call` | Full pipeline: intake + handling + summary + optional outbound call |
+| `POST /api/agent/voice-intake` | Process voice/text issue description |
+| `POST /api/agent/call-handling` | Execute resolution for a session |
+| `POST /api/agent/final-summary` | Generate resolution summary |
 
-Create new assistant:
+### Voice Utilities
 
-```bash
-node scripts/push-vapi-assistant.js --public-url https://YOUR_NGROK_URL
-```
+| Endpoint | Description |
+|----------|-------------|
+| `POST /api/voice/transcribe` | Speech-to-text via Hathora |
+| `POST /api/voice/synthesize` | Text-to-speech via Hathora |
 
-Update existing assistant:
+## License
 
-```bash
-node scripts/push-vapi-assistant.js --assistant-id YOUR_ASSISTANT_ID --public-url https://YOUR_NGROK_URL
-```
-
-Assistant config source:
-- `src/config/vapi-assistant.json`
-
-## 4) Tool Endpoints (called by Vapi)
-
-- `POST /api/tools/verify-customer`
-- `POST /api/tools/request-fee-waiver`
-- `POST /api/tools/report-fraud-alert`
-- `POST /api/tools/open-billing-dispute`
-- `POST /api/tools/escalate-to-human`
-
-Webhook auth:
-- If `VAPI_WEBHOOK_SECRET` is set, backend validates `x-vapi-secret`.
-
-## 5) Hathora Voice Utility Endpoints
-
-- `POST /api/voice/transcribe`
-- `POST /api/voice/synthesize`
-
-These are optional utility routes for demoing Hathora integration explicitly.
-
-## 6) Local Frontend Dashboard
-
-When the backend is running, open:
-
-- `http://localhost:3000` (or your configured `PORT`, such as `3011`)
-
-The dashboard includes:
-- Health check button
-- JSON editors and run buttons for verify/fee/fraud/dispute flows
-- `x-vapi-secret` input to test webhook-protected routes locally
-
-## 7) Demo Payloads
-
-Fee waiver:
-
-```bash
-curl -X POST http://localhost:3000/api/tools/request-fee-waiver \
-  -H 'Content-Type: application/json' \
-  -d '{"customerId":"cust_001","cardLast4":"3005","feeType":"annual","reason":"Loyal customer requesting retention help"}'
-```
-
-Fraud alert:
-
-```bash
-curl -X POST http://localhost:3000/api/tools/report-fraud-alert \
-  -H 'Content-Type: application/json' \
-  -d '{"customerId":"cust_001","cardLast4":"3005","suspiciousTransaction":"$412.88 at unknown electronics merchant"}'
-```
-
-Billing dispute:
-
-```bash
-curl -X POST http://localhost:3000/api/tools/open-billing-dispute \
-  -H 'Content-Type: application/json' \
-  -d '{"customerId":"cust_001","cardLast4":"8891","merchant":"STREAMFLIX","amount":89.99,"transactionDate":"2026-02-01","reason":"charged after cancellation"}'
-```
-
-## 8) Hackathon Demo Flow
-
-1. Start backend + tunnel.
-2. Push assistant to Vapi.
-3. Place a call from Vapi dashboard.
-4. Ask agent to do one scenario (fee waiver, fraud alert, or dispute).
-5. Show JSON response from backend tool as proof of action.
-
-## Notes
-
-- This repo uses mock customer data in `data/customers.json`.
-- For production, replace file storage with a database and add compliance/legal review.
+MIT

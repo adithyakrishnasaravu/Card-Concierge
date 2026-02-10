@@ -3,7 +3,8 @@ const $ = (id) => document.getElementById(id);
 const state = {
   recordedAudio: null,
   issues: [],
-  cards: []
+  cards: [],
+  selectedCard: null
 };
 
 function headers() {
@@ -17,15 +18,30 @@ function baseUrl() {
   return ($("baseUrl").value || "http://localhost:3011").replace(/\/$/, "");
 }
 
-function render(el, content) {
-  el.textContent = typeof content === "string" ? content : JSON.stringify(content, null, 2);
-}
-
 function setLoading(btn, loading, label) {
   btn.disabled = loading;
-  btn.textContent = loading ? "Running..." : label;
-  if (loading) btn.classList.add("loading");
-  else btn.classList.remove("loading");
+  if (loading) {
+    btn.classList.add("loading");
+    // Preserve SVG icon in button
+    const svg = btn.querySelector("svg");
+    if (svg) {
+      btn.textContent = "";
+      btn.appendChild(svg);
+      btn.append(" Running...");
+    } else {
+      btn.textContent = "Running...";
+    }
+  } else {
+    btn.classList.remove("loading");
+    const svg = btn.querySelector("svg");
+    if (svg) {
+      btn.textContent = "";
+      btn.appendChild(svg);
+      btn.append(` ${label}`);
+    } else {
+      btn.textContent = label;
+    }
+  }
 }
 
 async function apiPost(path, body) {
@@ -56,74 +72,117 @@ function toBase64(blob) {
   });
 }
 
-function renderIssues() {
-  const root = $("issuesList");
-  if (!state.issues.length) {
-    root.innerHTML = '<p class="empty">No issues yet.</p>';
+// --- Step unlocking ---
+function unlockStep(stepNum) {
+  const el = $(`step${stepNum}`);
+  if (el) {
+    el.classList.remove("step-locked");
+  }
+}
+
+// --- Visual Card Tiles ---
+function renderCardTiles() {
+  const tilesEl = $("cardTiles");
+  if (!state.cards.length) {
+    tilesEl.innerHTML = "";
     return;
   }
 
-  root.innerHTML = state.issues
-    .map(
-      (issue) => `
-      <article class="issue ${issue.progress >= 100 ? 'issue-done' : ''}">
-        <div class="issue-top">
-          <span class="issue-label">${issue.label}</span>
-          <span class="issue-id">${issue.id}</span>
+  tilesEl.innerHTML = state.cards.map((c) => {
+    const isSelected = state.selectedCard === c.cardLast4;
+    const statusClass = c.fraudLocked ? "locked" : "active";
+    const statusText = c.fraudLocked ? "Locked" : "Active";
+    return `
+      <div class="card-tile ${isSelected ? "selected" : ""}" data-last4="${c.cardLast4}">
+        <div>
+          <div class="card-tile-issuer">${c.issuer}</div>
+          <div class="card-tile-nickname">${c.nickname}</div>
         </div>
-        ${issue.issueType ? `<span class="issue-type-badge">${issue.issueType.replace("_", " ")}</span>` : ""}
-        <div class="progress"><span style="width:${issue.progress}%"></span></div>
-        <div class="progress-text">${issue.progress}% - ${issue.status}</div>
-        ${issue.summary ? `<div class="issue-summary">${issue.summary}</div>` : ""}
-        ${issue.callId ? `<div class="issue-call-id">Call ID: ${issue.callId}</div>` : ""}
-        ${issue.ticketId ? `<div class="issue-ticket">Ticket: ${issue.ticketId}</div>` : ""}
-      </article>
-    `
-    )
-    .join("");
-}
+        <div class="card-tile-bottom">
+          <span class="card-tile-last4">**** ${c.cardLast4}</span>
+          <span class="card-tile-status ${statusClass}">${statusText}</span>
+        </div>
+      </div>
+    `;
+  }).join("");
 
-function setIssueProgress(id, progress, status, extra) {
-  const issue = state.issues.find((x) => x.id === id);
-  if (!issue) return;
-  issue.progress = progress;
-  issue.status = status;
-  if (extra) Object.assign(issue, extra);
-  renderIssues();
+  // Click to select
+  tilesEl.querySelectorAll(".card-tile").forEach((tile) => {
+    tile.addEventListener("click", () => {
+      const last4 = tile.dataset.last4;
+      state.selectedCard = last4;
+      // Update dropdown
+      $("cardSelect").value = last4;
+      // Re-render tiles to update selection
+      renderCardTiles();
+      // Unlock step 2
+      unlockStep(2);
+      unlockStep(3);
+    });
+  });
 }
 
 function selectedCardLast4() {
-  const sel = $("cardSelect");
-  return sel.value || state.cards[0]?.cardLast4 || "3005";
+  return state.selectedCard || $("cardSelect").value || state.cards[0]?.cardLast4 || "3005";
 }
+
+const DEMO_CARDS = [
+  { issuer: "American Express", nickname: "Amex Platinum", cardLast4: "1008", fraudLocked: false }
+];
 
 async function connectCards() {
   const btn = $("connectCardsBtn");
-  const out = $("cardsOutput");
   setLoading(btn, true, "Connect All Cards");
-  render(out, "Connecting cards...");
   try {
-    const data = await apiPost("/api/tools/list-cards", { customerId: $("customerId").value.trim() || "cust_001" });
-    state.cards = data.cards || [];
-
-    const sel = $("cardSelect");
-    sel.innerHTML = "";
-    state.cards.forEach((c) => {
-      const opt = document.createElement("option");
-      opt.value = c.cardLast4;
-      opt.textContent = `${c.issuer} - ${c.nickname} (****${c.cardLast4})${c.fraudLocked ? " [LOCKED]" : ""}`;
-      sel.appendChild(opt);
+    const data = await apiPost("/api/tools/list-cards", {
+      customerId: $("customerId").value.trim() || "cust_001"
     });
-    sel.disabled = false;
+    state.cards = data.cards || [];
+  } catch {
+    // Fallback to demo card
+    state.cards = DEMO_CARDS;
+  }
 
-    render(out, data);
-  } catch (err) {
-    render(out, `Connect failed: ${err.message}`);
-  } finally {
-    setLoading(btn, false, "Connect All Cards");
+  // Populate dropdown
+  const sel = $("cardSelect");
+  sel.innerHTML = "";
+  state.cards.forEach((c) => {
+    const opt = document.createElement("option");
+    opt.value = c.cardLast4;
+    opt.textContent = `${c.issuer} - ${c.nickname} (****${c.cardLast4})${c.fraudLocked ? " [LOCKED]" : ""}`;
+    sel.appendChild(opt);
+  });
+  sel.disabled = false;
+
+  // Auto-select first card
+  if (state.cards.length > 0) {
+    state.selectedCard = state.cards[0].cardLast4;
+    sel.value = state.selectedCard;
+  }
+
+  // Show select label and render tiles
+  $("cardSelectLabel").style.display = "block";
+  renderCardTiles();
+
+  // Unlock steps 2 and 3
+  unlockStep(2);
+  unlockStep(3);
+
+  setLoading(btn, false, "Connect All Cards");
+}
+
+// --- Card select dropdown sync ---
+function onCardSelectChange() {
+  const val = $("cardSelect").value;
+  if (val) {
+    state.selectedCard = val;
+    renderCardTiles();
+    unlockStep(2);
+    unlockStep(3);
   }
 }
 
+// --- Recording ---
 let mediaRecorder;
 let audioChunks = [];
 
@@ -143,13 +202,18 @@ async function startRecording() {
         audioBase64: await toBase64(blob),
         mimeType: blob.type || "audio/webm"
       };
-      $("recordStatus").textContent = `Recorded (${state.recordedAudio.mimeType})`;
-      $("recordStatus").classList.remove("recording");
+      const statusEl = $("recordStatus");
+      statusEl.textContent = `Recorded (${state.recordedAudio.mimeType})`;
+      statusEl.classList.remove("recording");
+      // Show delete button
+      $("deleteRecording").style.display = "inline-flex";
     };
 
     mediaRecorder.start();
-    $("recordStatus").textContent = "Recording...";
-    $("recordStatus").classList.add("recording");
+    const statusEl = $("recordStatus");
+    statusEl.textContent = "Recording...";
+    statusEl.classList.add("recording");
+    $("deleteRecording").style.display = "none";
   } catch (err) {
     $("recordStatus").textContent = `Recording failed: ${err.message}`;
   }
@@ -164,11 +228,133 @@ function stopRecording() {
   mediaRecorder.stream.getTracks().forEach((track) => track.stop());
 }
 
-async function runAgentFlow() {
-  const btn = $("runIssueBtn");
-  const out = $("issueOutput");
-  setLoading(btn, true, "Run Agent Flow");
-  render(out, "Running agent flow...");
+function deleteRecording() {
+  state.recordedAudio = null;
+  audioChunks = [];
+  const statusEl = $("recordStatus");
+  statusEl.textContent = "Not recording";
+  statusEl.classList.remove("recording");
+  $("deleteRecording").style.display = "none";
+}
+
+// --- Structured Result Panel ---
+function renderResult(data, error) {
+  const panel = $("resultPanel");
+  panel.style.display = "block";
+
+  if (error) {
+    panel.className = "result-panel error";
+    panel.innerHTML = `
+      <div class="result-header error">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
+        </svg>
+        Error
+      </div>
+      <div class="result-rows">
+        <div class="result-row">
+          <span class="result-label">Details</span>
+          <span class="result-value">${error}</span>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  const resolution = data?.handled?.resolution || {};
+  const summaryText = data?.summary?.summary || "Resolution generated";
+  const issueType = data?.intake?.issueType || "unknown";
+  const ticketId = resolution.ticketId || resolution.caseId || resolution.disputeId || null;
+  const callId = data?.call?.id || null;
+  const sessionId = data?.intake?.sessionId || "N/A";
+  const outcome = resolution.approved !== undefined
+    ? (resolution.approved ? "Approved" : "Denied")
+    : (resolution.disputeId ? "Dispute filed" : resolution.caseId ? "Alert filed" : "Processed");
+
+  panel.className = "result-panel success";
+  panel.innerHTML = `
+    <div class="result-header success">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+      </svg>
+      Resolved
+    </div>
+    <div class="result-rows">
+      <div class="result-row">
+        <span class="result-label">Session ID</span>
+        <span class="result-value">${sessionId}</span>
+      </div>
+      <div class="result-row">
+        <span class="result-label">Issue Type</span>
+        <span class="result-value">${issueType.replace(/_/g, " ")}</span>
+      </div>
+      <div class="result-row">
+        <span class="result-label">Outcome</span>
+        <span class="result-value">${outcome}</span>
+      </div>
+      <div class="result-row">
+        <span class="result-label">Summary</span>
+        <span class="result-value">${summaryText}</span>
+      </div>
+      ${ticketId ? `<div class="result-row"><span class="result-label">Ticket ID</span><span class="result-value">${ticketId}</span></div>` : ""}
+      ${callId ? `<div class="result-row"><span class="result-label">Call ID</span><span class="result-value">${callId}</span></div>` : ""}
+    </div>
+  `;
+}
+
+// --- Issues ---
+function renderIssues() {
+  const root = $("issuesList");
+  if (!state.issues.length) {
+    root.innerHTML = '<p class="empty">No issues yet.</p>';
+    return;
+  }
+
+  root.innerHTML = state.issues.map((issue) => {
+    const isFailed = issue.status?.startsWith("Failed");
+    const isDone = issue.progress >= 100 && !isFailed;
+    const cardClass = isDone ? "issue-done" : isFailed ? "issue-failed" : "";
+
+    let statusBadgeClass = "in-progress";
+    let statusBadgeText = "In Progress";
+    if (isDone) { statusBadgeClass = "resolved"; statusBadgeText = "Resolved"; }
+    if (isFailed) { statusBadgeClass = "failed"; statusBadgeText = "Failed"; }
+
+    return `
+      <article class="issue ${cardClass}">
+        <div class="issue-top">
+          <span class="issue-label">${issue.label}</span>
+          <span class="issue-status-badge ${statusBadgeClass}">${statusBadgeText}</span>
+        </div>
+        <span class="issue-id">${issue.id}</span>
+        ${issue.issueType ? `<span class="issue-type-badge">${issue.issueType.replace(/_/g, " ")}</span>` : ""}
+        <div class="progress"><span style="width:${issue.progress}%"></span></div>
+        <div class="progress-text">${issue.status}</div>
+        ${issue.summary ? `<div class="issue-summary">${issue.summary}</div>` : ""}
+        <div class="issue-meta">
+          ${issue.callId ? `<span class="issue-call-id">Call: ${issue.callId}</span>` : ""}
+          ${issue.ticketId ? `<span class="issue-ticket">Ticket: ${issue.ticketId}</span>` : ""}
+        </div>
+      </article>
+    `;
+  }).join("");
+}
+
+function setIssueProgress(id, progress, status, extra) {
+  const issue = state.issues.find((x) => x.id === id);
+  if (!issue) return;
+  issue.progress = progress;
+  issue.status = status;
+  if (extra) Object.assign(issue, extra);
+  renderIssues();
+}
+
+// --- Solve (Agent Flow) ---
+async function solve() {
+  const btn = $("solveBtn");
+  const panel = $("resultPanel");
+  panel.style.display = "none";
+  setLoading(btn, true, "Solve");
 
   const issueId = `iss_${Date.now().toString().slice(-6)}`;
   state.issues.unshift({
@@ -211,46 +397,38 @@ async function runAgentFlow() {
       callId
     });
 
-    const display = {
-      sessionId: data?.intake?.sessionId,
-      issueType,
-      customerName: data?.summary?.customerName,
-      cardLast4: data?.intake?.cardLast4,
-      summary: summaryText,
-      outcome: resolution.approved !== undefined
-        ? (resolution.approved ? "Approved" : "Denied")
-        : (resolution.disputeId ? "Dispute filed" : resolution.caseId ? "Alert filed" : "Processed"),
-      ticketId,
-      callId
-    };
-    render(out, display);
+    renderResult(data, null);
   } catch (err) {
     setIssueProgress(issueId, 100, `Failed: ${err.message}`);
-    render(out, `Flow failed: ${err.message}`);
+    renderResult(null, err.message);
   } finally {
-    setLoading(btn, false, "Run Agent Flow");
+    setLoading(btn, false, "Solve");
   }
 }
 
+// --- Health Check ---
 async function checkHealth() {
   const btn = $("healthBtn");
-  const out = $("cardsOutput");
-  setLoading(btn, true, "Check Health");
+  const out = $("healthOutput");
+  setLoading(btn, true, "Health Check");
   try {
     const res = await fetch(`${baseUrl()}/health`);
     const data = await res.json();
-    render(out, data);
+    out.textContent = JSON.stringify(data, null, 2);
   } catch (err) {
-    render(out, `Health failed: ${err.message}`);
+    out.textContent = `Health failed: ${err.message}`;
   } finally {
-    setLoading(btn, false, "Check Health");
+    setLoading(btn, false, "Health Check");
   }
 }
 
+// --- Event Listeners ---
 $("connectCardsBtn").addEventListener("click", connectCards);
+$("cardSelect").addEventListener("change", onCardSelectChange);
 $("startRecording").addEventListener("click", startRecording);
 $("stopRecording").addEventListener("click", stopRecording);
-$("runIssueBtn").addEventListener("click", runAgentFlow);
+$("deleteRecording").addEventListener("click", deleteRecording);
+$("solveBtn").addEventListener("click", solve);
 $("healthBtn").addEventListener("click", checkHealth);
 
 renderIssues();

@@ -222,6 +222,11 @@ app.post("/api/demo/call-summary", asyncRoute((req) => {
   };
 }));
 
-app.listen(port, () => {
-  console.log(`Server running at http://localhost:${port}`);
-});
+// Local dev: listen on port. Vercel: export the app.
+if (!process.env.VERCEL) {
+  app.listen(port, () => {
+    console.log(`Server running at http://localhost:${port}`);
+  });
+}
+
+export default app;
