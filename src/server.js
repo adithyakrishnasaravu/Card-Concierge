@@ -72,7 +72,6 @@ app.post(
 
 app.post(
   "/api/tools/list-cards",
-  checkWebhookSignature,
   asyncRoute((req) => listCustomerCards(req.body))
 );
 
@@ -132,7 +131,6 @@ app.post(
 
 app.post(
   "/api/agent/test-call",
-  checkWebhookSignature,
   asyncRoute(async (req) => {
     const intake = await voiceIntake(req.body);
     const handled = await callHandling({ sessionId: intake.sessionId });
