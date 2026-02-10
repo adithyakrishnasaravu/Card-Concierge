@@ -1,0 +1,82 @@
+{
+  "customers": [
+    {
+      "id": "cust_001",
+      "fullName": "Alex Carter",
+      "last4Ssn": "1234",
+      "phone": "+1-415-555-0132",
+      "email": "alex.carter@example.com",
+      "cards": [
+        {
+          "cardId": "card_amex_01",
+          "issuer": "American Express",
+          "nickname": "Travel Platinum",
+          "fullNumber": "3742 814201 53005",
+          "last4": "3005",
+          "status": "active",
+          "annualFee": 695,
+          "lateFeesYtd": 35,
+          "fraudLocked": true
+        },
+        {
+          "cardId": "card_chase_01",
+          "issuer": "Chase",
+          "nickname": "Sapphire Reserve",
+          "fullNumber": "4847 1860 7234 8891",
+          "last4": "8891",
+          "status": "active",
+          "annualFee": 550,
+          "lateFeesYtd": 0,
+          "fraudLocked": false
+        }
+      ],
+      "openDisputes": [
+        {
+          "disputeId": "disp_603ab236",
+          "cardId": "card_chase_01",
+          "cardLast4": "8891",
+          "merchant": "STREAMFLIX",
+          "amount": 89.99,
+          "transactionDate": "2026-02-01",
+          "reason": "charged after cancellation",
+          "status": "submitted",
+          "createdAt": "2026-02-10T01:35:01.293Z"
+        }
+      ],
+      "transactions": [
+        {
+          "transactionId": "txn_001",
+          "cardLast4": "3005",
+          "merchant": "JETGO AIR",
+          "amount": 412.88,
+          "currency": "USD",
+          "postedAt": "2026-02-08T18:10:00.000Z",
+          "status": "posted",
+          "flagged": true,
+          "flagReason": "test",
+          "flaggedAt": "2026-02-10T02:33:51.426Z"
+        },
+        {
+          "transactionId": "txn_002",
+          "cardLast4": "3005",
+          "merchant": "HOTEL NOVA",
+          "amount": 238.17,
+          "currency": "USD",
+          "postedAt": "2026-02-04T14:25:00.000Z",
+          "status": "posted",
+          "flagged": false
+        },
+        {
+          "transactionId": "txn_003",
+          "cardLast4": "8891",
+          "merchant": "STREAMFLIX",
+          "amount": 89.99,
+          "currency": "USD",
+          "postedAt": "2026-02-01T10:42:00.000Z",
+          "status": "posted",
+          "flagged": false
+        }
+      ]
+    }
+  ]
+}

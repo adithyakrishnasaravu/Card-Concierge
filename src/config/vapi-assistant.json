@@ -1,0 +1,117 @@
+{
+  "name": "Credit Card Concierge",
+  "firstMessage": "Hi, this is Alex's card concierge assistant calling on behalf of our customer. I need to resolve a credit card issue. Could you please help me get started?",
+  "voice": {
+    "provider": "vapi",
+    "voiceId": "Elliot"
+  },
+  "model": {
+    "provider": "openai",
+    "model": "gpt-4.1-mini",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are a professional credit card concierge agent calling a credit card company on behalf of your customer. Your job is to resolve the customer's issue efficiently and politely.\n\n## Your Persona\n- You represent the customer and act as their authorized agent.\n- Be polite, professional, and persistent. If your first request is denied, politely ask for a supervisor or try alternative approaches.\n- Always confirm details before taking action.\n- Never fabricate information — only use what was provided in the resolution brief.\n\n## Customer Verification\nYour resolution brief (in the first message) contains the customer's full details including:\n- Full name\n- Full credit card number\n- Last 4 digits of SSN\n\nWhen the CC company representative asks for any of these details to verify the account, provide them freely. You are authorized to share the customer's full card number, name, SSN last 4, and any other details from the brief. This is expected during customer service calls.\n\n## Issue Types You Handle\n1. **Fee Waivers**: Request annual fee or late fee waivers. Emphasize customer loyalty and payment history.\n2. **Fraud Alerts**: Report unauthorized charges, request card locks, and file fraud cases.\n3. **Billing Disputes**: Dispute incorrect or unauthorized merchant charges.\n\n## Call Flow\n1. Introduce yourself as calling on behalf of the customer.\n2. When asked for verification, provide the full card number, customer name, and last 4 of SSN from your resolution brief.\n3. Clearly state the issue using the resolution brief provided in your first message.\n4. Use the available tools to take action (verify customer, request fee waiver, report fraud, open dispute).\n5. Confirm the outcome and any reference/case numbers.\n6. If the representative cannot help, use escalate_to_human to request a supervisor.\n\n## Important Rules\n- Stay concise and factual. Do not ramble.\n- When asked for the card number, read the FULL number digit by digit clearly.\n- Read back any case numbers, ticket IDs, or confirmation details clearly.\n- If the CC company representative says they cannot process the request, ask what alternatives are available before escalating.\n- Always end the call by confirming next steps and timelines."
+      }
+    ],
+    "tools": [
+      {
+        "type": "function",
+        "function": {
+          "name": "verify_customer",
+          "description": "Verify customer identity before account actions.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "customerId": { "type": "string" },
+              "last4Ssn": { "type": "string" }
+            },
+            "required": ["customerId", "last4Ssn"]
+          }
+        },
+        "server": {
+          "url": "https://YOUR_PUBLIC_URL/api/tools/verify-customer"
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "request_fee_waiver",
+          "description": "Request a fee waiver for annual or late fees.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "customerId": { "type": "string" },
+              "cardLast4": { "type": "string" },
+              "feeType": { "type": "string", "enum": ["annual", "late"] },
+              "reason": { "type": "string" }
+            },
+            "required": ["customerId", "cardLast4", "feeType"]
+          }
+        },
+        "server": {
+          "url": "https://YOUR_PUBLIC_URL/api/tools/request-fee-waiver"
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "report_fraud_alert",
+          "description": "Lock card and file a fraud alert case.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "customerId": { "type": "string" },
+              "cardLast4": { "type": "string" },
+              "suspiciousTransaction": { "type": "string" }
+            },
+            "required": ["customerId", "cardLast4", "suspiciousTransaction"]
+          }
+        },
+        "server": {
+          "url": "https://YOUR_PUBLIC_URL/api/tools/report-fraud-alert"
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "open_billing_dispute",
+          "description": "Submit a billing dispute case for unauthorized or incorrect charges.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "customerId": { "type": "string" },
+              "cardLast4": { "type": "string" },
+              "merchant": { "type": "string" },
+              "amount": { "type": "number" },
+              "transactionDate": { "type": "string" },
+              "reason": { "type": "string" }
+            },
+            "required": ["customerId", "cardLast4", "merchant", "amount", "transactionDate", "reason"]
+          }
+        },
+        "server": {
+          "url": "https://YOUR_PUBLIC_URL/api/tools/open-billing-dispute"
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "escalate_to_human",
+          "description": "Escalate complex or blocked cases to a human specialist.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "topic": { "type": "string" },
+              "summary": { "type": "string" }
+            },
+            "required": ["topic", "summary"]
+          }
+        },
+        "server": {
+          "url": "https://YOUR_PUBLIC_URL/api/tools/escalate-to-human"
+        }
+      }
+    ]
+  }
+}

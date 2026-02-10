@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Card Concierge</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Manrope:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="grid-bg"></div>
+
+    <main class="app">
+      <header class="hero">
+        <p class="eyebrow">Card Concierge</p>
+        <h1>One place to handle credit card issues</h1>
+      </header>
+
+      <section class="cards">
+        <article class="card">
+          <div class="card-head">
+            <h2>Link your credit cards</h2>
+            <span class="chip">Step 1</span>
+          </div>
+          <p>Connect and view all cards before starting a case.</p>
+
+          <label>
+            Customer ID
+            <input id="customerId" value="cust_001" />
+          </label>
+          <label>
+            API Base URL
+            <input id="baseUrl" value="http://localhost:3011" />
+          </label>
+          <label>
+            x-vapi-secret
+            <input id="secret" placeholder="Paste VAPI_WEBHOOK_SECRET" />
+          </label>
+
+          <div class="btn-row">
+            <button class="btn" id="connectCardsBtn">Connect All Cards</button>
+            <button class="btn secondary" id="healthBtn">Check Health</button>
+          </div>
+
+          <label>
+            Select Card
+            <select id="cardSelect" disabled>
+              <option value="">Connect cards first</option>
+            </select>
+          </label>
+
+          <pre id="cardsOutput">No cards connected yet.</pre>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <h2>Record the issue</h2>
+            <span class="chip">Step 2</span>
+          </div>
+          <p>Talk to the agent, run the call flow, and receive resolution summary.</p>
+
+          <label>
+            Call this number (for test)
+            <input id="callToNumber" placeholder="+1XXXXXXXXXX" />
+          </label>
+
+          <div class="record-row">
+            <button class="btn secondary" id="startRecording">Start Recording</button>
+            <button class="btn secondary" id="stopRecording">Stop Recording</button>
+          </div>
+
+          <p id="recordStatus" class="mono">Not recording</p>
+
+          <label>
+            Fallback transcript (used if no recording)
+            <textarea id="transcript">I was charged $412.88 at JetGo Air and I did not make this purchase.</textarea>
+          </label>
+
+          <button class="btn" id="runIssueBtn">Run Agent Flow</button>
+          <pre id="issueOutput">Awaiting issue input.</pre>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <h2>Issue status</h2>
+            <span class="chip">Step 3</span>
+          </div>
+          <p>Track every issue as it moves from intake to resolution.</p>
+
+          <div id="issuesList" class="issues">
+            <p class="empty">No issues yet.</p>
+          </div>
+        </article>
+      </section>
+    </main>
+
+    <script src="/app.js" type="module"></script>
+  </body>
+</html>
