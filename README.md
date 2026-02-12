@@ -1,8 +1,8 @@
-# Card Concierge
+# KreditConcierge
 
 AI-powered voice agent that calls your credit card company and resolves issues for you.
 
-Describe the problem — Card Concierge handles the rest: fee waivers, fraud alerts, and billing disputes, all through a single guided flow.
+Describe the problem — Kredit Concierge handles the rest: fee waivers, fraud alerts, and billing disputes, all through a single guided flow.
 
 ## How It Works
 
