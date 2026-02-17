@@ -27,7 +27,7 @@
           "status": "active",
           "annualFee": 550,
           "lateFeesYtd": 0,
-          "fraudLocked": false
+          "fraudLocked": true
         }
       ],
       "openDisputes": [

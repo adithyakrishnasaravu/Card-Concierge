@@ -114,7 +114,11 @@
 
           <label>
             Phone number to call
-            <input id="callToNumber" placeholder="+1XXXXXXXXXX" />
+            <div class="phone-input-group">
+              <span class="country-code">+1</span>
+              <input id="phoneNumber" placeholder="(555) 123-4567" maxlength="14" />
+            </div>
+            <span id="phoneError" class="phone-error"></span>
           </label>
 
           <div class="record-row">

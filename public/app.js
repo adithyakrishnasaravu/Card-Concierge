@@ -84,6 +84,31 @@ function toBase64(blob) {
   });
 }
 
+// --- Phone Input ---
+function formatPhoneInput(e) {
+  const input = e.target;
+  const digits = input.value.replace(/\D/g, "").slice(0, 10);
+  let formatted = "";
+  if (digits.length > 0) formatted = "(" + digits.slice(0, 3);
+  if (digits.length >= 3) formatted += ") ";
+  if (digits.length > 3) formatted += digits.slice(3, 6);
+  if (digits.length >= 6) formatted += "-";
+  if (digits.length > 6) formatted += digits.slice(6, 10);
+  input.value = formatted;
+
+  // Clear error on input
+  const err = $("phoneError");
+  err.textContent = "";
+  err.classList.remove("visible");
+}
+
+function getPhoneNumber() {
+  const digits = $("phoneNumber").value.replace(/\D/g, "");
+  if (digits.length === 0) return "";
+  if (digits.length === 10) return "+1" + digits;
+  return null; // partially filled, invalid
+}
+
 // --- Step unlocking ---
 function unlockStep(stepNum) {
   const el = $(`step${stepNum}`);
@@ -425,10 +450,22 @@ async function solve() {
   renderIssues();
 
   try {
+    const phoneNumber = getPhoneNumber();
+    if (phoneNumber === null) {
+      const err = $("phoneError");
+      err.textContent = "Please enter a valid 10-digit phone number or leave empty.";
+      err.classList.add("visible");
+      setLoading(btn, false, "Solve");
+      // Remove the issue we just added
+      state.issues.shift();
+      renderIssues();
+      return;
+    }
+
     const payload = {
       customerId: $("customerId").value.trim() || "cust_001",
       cardLast4: selectedCardLast4(),
-      callToNumber: $("callToNumber").value.trim(),
+      callToNumber: phoneNumber,
       transcript
     };
 
@@ -491,6 +528,7 @@ $("cardSelect").addEventListener("change", onCardSelectChange);
 $("startRecording").addEventListener("click", startRecording);
 $("stopRecording").addEventListener("click", stopRecording);
 $("deleteRecording").addEventListener("click", deleteRecording);
+$("phoneNumber").addEventListener("input", formatPhoneInput);
 $("solveBtn").addEventListener("click", solve);
 $("healthBtn").addEventListener("click", checkHealth);
 

@@ -344,6 +344,47 @@ textarea {
   color: #ff4757;
 }
 
+/* Phone Input */
+.phone-input-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.phone-input-group input {
+  margin-top: 0;
+  flex: 1;
+}
+
+.country-code {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font-family: var(--mono);
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--ink);
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.phone-error {
+  display: none;
+  margin-top: 4px;
+  font-size: 0.76rem;
+  color: #c0392b;
+  font-weight: 600;
+}
+
+.phone-error.visible {
+  display: block;
+}
+
 /* Record Row */
 .record-row {
   display: flex;

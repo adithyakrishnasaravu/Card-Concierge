@@ -87,8 +87,19 @@ export async function voiceIntake({
   audioBase64,
   mimeType = "audio/wav"
 }) {
+  console.log("[voiceIntake] === START ===");
+  console.log("[voiceIntake]   customerId:", customerId);
+  console.log("[voiceIntake]   cardLast4:", cardLast4);
+  console.log("[voiceIntake]   transcript provided:", transcript ? `"${transcript.slice(0, 80)}..."` : "NO");
+  console.log("[voiceIntake]   audioBase64 provided:", audioBase64 ? `YES (${(audioBase64.length * 0.75 / 1024).toFixed(1)} KB)` : "NO");
+  console.log("[voiceIntake]   mimeType:", mimeType);
+
   const customer = await getCustomerById(customerId);
-  if (!customer) throw new Error("Customer not found");
+  if (!customer) {
+    console.error("[voiceIntake] ERROR: Customer not found:", customerId);
+    throw new Error("Customer not found");
+  }
+  console.log("[voiceIntake]   Customer found:", customer.fullName);
 
   let finalTranscript = transcript || "";
   let sttResponse = null;
@@ -96,14 +107,22 @@ export async function voiceIntake({
 
   if (!finalTranscript) {
     if (!audioBase64) {
+      console.error("[voiceIntake] ERROR: No transcript AND no audio — nothing to process");
       throw new Error("Provide either transcript or audioBase64 for voice intake");
     }
+    console.log("[voiceIntake] No text transcript, attempting STT...");
     try {
       sttResponse = await transcribeAudio({ audioBase64, mimeType });
       finalTranscript = normalizeTranscript(sttResponse);
+      console.log("[voiceIntake] STT transcript:", finalTranscript ? `"${finalTranscript.slice(0, 100)}"` : "EMPTY after normalize");
     } catch (sttError) {
-      if (!process.env.HATHORA_CHAIN_URL) throw sttError;
+      console.error("[voiceIntake] STT FAILED:", sttError.message);
+      if (!process.env.HATHORA_CHAIN_URL) {
+        console.error("[voiceIntake] No HATHORA_CHAIN_URL set — cannot fallback. Throwing.");
+        throw sttError;
+      }
 
+      console.log("[voiceIntake] Falling back to voice chain...");
       chainResponse = await processVoiceChain({
         audioBase64,
         mimeType,
@@ -113,11 +132,16 @@ export async function voiceIntake({
 
       finalTranscript = "Voice issue captured via Hathora chain. Customer reported unauthorized or incorrect card charge.";
     }
+  } else {
+    console.log("[voiceIntake] Using provided text transcript, skipping STT");
   }
 
   if (!finalTranscript) {
+    console.error("[voiceIntake] ERROR: finalTranscript is empty after all attempts");
     throw new Error("Could not derive transcript from voice input");
   }
+  console.log("[voiceIntake] Final transcript:", `"${finalTranscript.slice(0, 100)}"`);
+  console.log("[voiceIntake] Detected issue:", detectIssueType(finalTranscript));
 
   const sessionId = `sess_${crypto.randomUUID().slice(0, 8)}`;
   const session = {

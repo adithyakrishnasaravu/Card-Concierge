@@ -160,21 +160,49 @@ app.post(
       const card = customer?.cards?.find(c => c.last4 === intake.cardLast4);
       const fullNumber = card?.fullNumber || `ending in ${intake.cardLast4}`;
 
-      const resolutionBrief = [
-        `Hello, I'm calling on behalf of ${summary.customerName || "our customer"}.`,
-        `Issue type: ${intake.issueType?.replace("_", " ")}.`,
-        `The customer's full card number is ${fullNumber}.`,
-        `The customer's name is ${summary.customerName}. Last 4 of SSN: ${customer?.last4Ssn || "on file"}.`,
-        `Customer reported: "${intake.transcript}".`,
-        summary.summary
-      ].join(" ");
+      const systemContext = [
+        `You are a polite, professional representative calling on behalf of a customer to resolve a credit card issue.`,
+        ``,
+        `CUSTOMER DETAILS (use only when asked or when verifying identity):`,
+        `- Name: ${summary.customerName || "on file"}`,
+        `- Card number: ${fullNumber}`,
+        `- Last 4 of SSN: ${customer?.last4Ssn || "on file"}`,
+        ``,
+        `ISSUE SUMMARY:`,
+        `- Type: ${intake.issueType?.replace("_", " ")}`,
+        `- Customer reported: "${intake.transcript}"`,
+        `- ${summary.summary}`,
+        ``,
+        `INSTRUCTIONS:`,
+        `- Start with a brief, natural greeting and state why you're calling in one sentence.`,
+        `- Do NOT read out card numbers, SSN, or personal details unprompted.`,
+        `- Only provide verification details (card number, SSN) when the representative asks for them.`,
+        `- You are speaking to a human. Be conversational, warm, and patient.`,
+        `- Speak at a calm, measured pace. Do not rush. Pause briefly between sentences.`,
+        `- Use short, simple sentences. Avoid cramming multiple points into one response.`,
+        `- Wait for the representative to finish speaking before responding.`,
+        `- When reading out numbers (card numbers, amounts), say each digit slowly and clearly with pauses.`,
+        `- Stay on topic and work toward resolving the customer's issue.`
+      ].join("\n");
+
+      const firstMessage = `Hi, I'm calling on behalf of ${summary.customerName || "a customer"} regarding an issue with their credit card ending in ${intake.cardLast4}. Could you help me with that?`;
 
       call = await createCall({
         assistantId,
         customerNumber: req.body.callToNumber,
         phoneNumberId: process.env.VAPI_OUTBOUND_PHONE_NUMBER_ID || undefined,
         assistantOverrides: {
-          firstMessage: resolutionBrief
+          firstMessage,
+          model: {
+            provider: "openai",
+            model: "gpt-4o",
+            messages: [{ role: "system", content: systemContext }]
+          },
+          voice: {
+            provider: "openai",
+            voiceId: "alloy",
+            speed: 0.85
+          }
         },
         metadata: {
           sessionId: intake.sessionId,
