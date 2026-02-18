@@ -8,14 +8,11 @@ const state = {
 };
 
 function headers() {
-  const out = { "Content-Type": "application/json" };
-  const secret = $("secret").value.trim();
-  if (secret) out["x-vapi-secret"] = secret;
-  return out;
+  return { "Content-Type": "application/json" };
 }
 
 function baseUrl() {
-  return ($("baseUrl").value || window.location.origin).replace(/\/$/, "");
+  return window.location.origin;
 }
 
 function setLoading(btn, loading, label) {
@@ -173,7 +170,7 @@ async function connectCards() {
   setLoading(btn, true, "Connect All Cards");
   try {
     const data = await apiPost("/api/tools/list-cards", {
-      customerId: $("customerId").value.trim() || "cust_001"
+      customerId: "cust_001"
     });
     state.cards = data.cards || [];
   } catch {
@@ -463,7 +460,7 @@ async function solve() {
     }
 
     const payload = {
-      customerId: $("customerId").value.trim() || "cust_001",
+      customerId: "cust_001",
       cardLast4: selectedCardLast4(),
       callToNumber: phoneNumber,
       transcript
@@ -506,22 +503,6 @@ async function solve() {
   }
 }
 
-// --- Health Check ---
-async function checkHealth() {
-  const btn = $("healthBtn");
-  const out = $("healthOutput");
-  setLoading(btn, true, "Health Check");
-  try {
-    const res = await fetch(`${baseUrl()}/health`);
-    const data = await res.json();
-    out.textContent = JSON.stringify(data, null, 2);
-  } catch (err) {
-    out.textContent = `Health failed: ${err.message}`;
-  } finally {
-    setLoading(btn, false, "Health Check");
-  }
-}
-
 // --- Event Listeners ---
 $("connectCardsBtn").addEventListener("click", connectCards);
 $("cardSelect").addEventListener("change", onCardSelectChange);
@@ -530,6 +511,5 @@ $("stopRecording").addEventListener("click", stopRecording);
 $("deleteRecording").addEventListener("click", deleteRecording);
 $("phoneNumber").addEventListener("input", formatPhoneInput);
 $("solveBtn").addEventListener("click", solve);
-$("healthBtn").addEventListener("click", checkHealth);
 
 renderIssues();

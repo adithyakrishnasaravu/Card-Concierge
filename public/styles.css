@@ -423,38 +423,6 @@ textarea {
   50% { opacity: 0.3; }
 }
 
-/* Settings Toggle */
-.settings-toggle {
-  margin-top: 16px;
-  border: 1px solid #e5dfd3;
-  border-radius: 10px;
-  overflow: hidden;
-}
-
-.settings-toggle summary {
-  padding: 10px 14px;
-  cursor: pointer;
-  font-size: 0.82rem;
-  font-weight: 700;
-  color: var(--muted);
-  background: #faf8f4;
-  user-select: none;
-}
-
-.settings-toggle summary:hover {
-  background: #f5f2ec;
-}
-
-.settings-body {
-  padding: 12px 14px 14px;
-  border-top: 1px solid #e5dfd3;
-}
-
-.settings-output {
-  min-height: 36px;
-  max-height: 100px;
-}
-
 /* Result Panel */
 .result-panel {
   margin-top: 16px;
